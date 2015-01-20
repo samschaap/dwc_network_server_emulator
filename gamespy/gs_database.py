@@ -94,7 +94,15 @@ class GamespyDatabase(object):
         self.conn.row_factory = sqlite3.Row
 
         #self.initialize_database()
+        
+    def __del__(self):
+        self.close()
 
+    def close(self):        
+        if self.conn != None:
+            self.conn.close()
+            self.conn = None
+            
     def initialize_database(self):
         with Transaction(self.conn) as tx:
             row = tx.queryone("SELECT COUNT(*) FROM sqlite_master WHERE name = 'users' AND type = 'table'")
@@ -395,6 +403,18 @@ class GamespyDatabase(object):
             return None
         else:
             return json.loads(r["data"])
+
+    def get_next_available_userid(self):
+        with Transaction(self.conn) as tx:
+            row = tx.queryone("SELECT max(userid) FROM users")
+            r = self.get_dict(row)
+        if r == None:
+            return '0000000000002'#Because all zeroes means Dolphin. Don't wanna get confused during debugging later.
+        else:
+            userid = str(int(json.loads(r['max(userid)'])) + 1)
+            while len(userid) < 13:
+                userid = "0"+userid
+            return userid
 
     def generate_authtoken(self, userid, data):
         # Since the auth token passed back to the game will be random, we can make it small enough that there
